@@ -1,0 +1,20 @@
+{
+  "name": "s3-reverse_proxy",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@prisma/client": "^6.15.0",
+    "express": "^5.1.0",
+    "http-proxy": "^1.18.1",
+    "nodemon": "^3.1.10",
+    "prisma": "^6.15.0"
+  }
+}

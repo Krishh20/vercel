@@ -1,0 +1,25 @@
+{
+  "name": "api_server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+     "dev": "nodemon index.js"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-ecs": "^3.879.0",
+    "@clickhouse/client": "^1.12.1",
+    "@prisma/client": "^6.15.0",
+    "express": "^5.1.0",
+    "kafkajs": "^2.2.4",
+    "nodemon": "^3.1.10",
+    "prisma": "^6.15.0",
+    "random-word-slugs": "^0.1.7",
+    "uuid": "^11.1.0",
+    "zod": "^4.1.5"
+  }
+}
