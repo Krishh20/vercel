@@ -1,8 +1,8 @@
 import express from "express";
 import { generateSlug } from "random-word-slugs";
 import { ECSClient, RunTaskCommand } from "@aws-sdk/client-ecs";
-import { z} from "zod"
-
+import {  z} from "zod"
+import cors from "cors";
 import {createClient} from "@clickhouse/client"
 import {Kafka} from "kafkajs"
 import { v4 as uuidv4 } from "uuid";
@@ -10,6 +10,10 @@ import fs from "fs"
 import path from "path";
 import { fileURLToPath } from "url";
 import { PrismaClient } from "./generated/prisma/client.js";
+import bcrypt from "bcrypt"
+import {jwt} from "jsonwebtoken"
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +21,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = 9000;
 
+app.use(
+  cors({
+    origin: true, // Reflects the request origin
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 const prisma =new PrismaClient()
+
+const JWT_SECRET=process.env.JWT_SECRET
 
 app.use(express.json());
 
@@ -54,6 +69,89 @@ const client=createClient({
   database:"default",
   username:process.env.CLICKHOUSE_USERNAME,
   password:process.env.CLICKHOUSE_PASSWORD
+})
+
+const userSchema = z.object({
+  username: z.string(),
+  password: z
+    .string()
+    .min(6, { message: "Password should have minimum length of 8" })
+    .max(15, "Password is too long"),
+});
+
+app.post("/register",async(req,res)=>{
+
+const safeParseResult=userSchema.safeParse(req.body)
+if(safeParseResult.error)  return res.status(400).json({
+  error:safeParseResult.error
+})
+//create User model, import here
+const {username, password}=req.body
+const existingUser=await prisma.user.findUnique({
+  where:{
+    username
+  }
+})
+
+if(existingUser) return res.status(400).json({ message: "username already exists" });
+
+const hashedPassword= await bcrypt.hash(password,10)
+const user=await prisma.user.create({
+  data:{
+    username, password:hashedPassword
+  }
+})
+
+res.status(201).json({
+      message: "user registered successfully",
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+      },
+    });
+})
+
+app.post("/login",async(req,res)=>{
+const safeParseResult=userSchema.safeParse(req.body)
+if(safeParseResult.error)  return res.status(400).json({
+  error:safeParseResult.error
+})
+//create User model, import here
+const {username, password}=req.body
+const user=await prisma.user.findUnique({
+  where:{
+    username
+  }
+})
+  if (!user) {
+      return res.status(400).json({ message: "invalid username or password" });
+    }
+
+      const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) {
+      return res.status(400).json({ message: "invalid username or password" });
+    }
+
+    const token=jwt.sign({userId:user.id},"KRISH")
+     res.status(200).json({ message: "login success", token:token,authName:username })
+})
+//add authmiddleware
+app.get("/getProjects",authMiddleware,async(req,res)=>{
+  const projects = await prismaClient.project.findMany({
+      where: {
+        userId: req.userId,
+      },
+      include: {
+        deployments: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
+      },
+    });
+    res.status(200).json({ projects });
 })
 
 app.post("/project",async(req,res)=>{
