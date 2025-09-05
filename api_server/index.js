@@ -45,8 +45,8 @@ const kafka=new Kafka({
 const consumer=kafka.consumer({groupId:"api-server-logs-consumer"})
 
 const config = {
-  CLUSTER: "",
-  TASK: "",
+  CLUSTER: process.env.ECS_CLUSTER,
+  TASK: process.env.ECS_TASK,
 };
 
 const client=createClient({
@@ -83,43 +83,58 @@ app.post("/deploy", async(req, res) => {
   if(!project) return res.status(404).json({error:"project not found"})
 
     //check if there is no running deployment
-  const deployment=await prisma.deployment.create({
-    project:{connect:{id:process}},
-    status:"QUEUED"
-  })
+const deployment = await prisma.deployment.create({
+  data: {
+    project: { connect: { id: projectId } },
+    status: "QUEUED",
+  },
+});
+
 
   //CLICKHOUSE COLUMNAR DB
-
-  const command = new RunTaskCommand({
+ const command = new RunTaskCommand({
     cluster: config.CLUSTER,
     taskDefinition: config.TASK,
     launchType: "FARGATE",
     count: 1,
     networkConfiguration: {
       awsvpcConfiguration: {
-        assignPublicIp: "Enabled",
-        subnets: ["", "", ""],
-        securityGroups: [""],
+        assignPublicIp: "ENABLED",
+        subnets: [
+          "subnet-0f70d24abfd484dac",
+          "subnet-02027e81b2bc35a1c",
+          "subnet-04fb41e96c234f686"
+        ],
+        securityGroups: ["sg-0111dcbf3e21e7367"],
       },
-      overrides: {
-        containerOverrides: {
-          name: "builder-image",
+    },
+    overrides: {
+      containerOverrides: [
+        {
+          name: "builder-image-krish",
           environment: [
-            {
-              name: GIT_REPOSITORY_URL,
-              value: project.gitURL,
-            },
-            {
-                name:PROJECT_ID,
-                value:projectId
-            },
-            {
-              name:DEPLOYMENT_ID,
-              value:deployment.id
-            }
+           { name: "GIT_REPOSITORY_URL", value: project.gitURL },
+              { name: "PROJECT_ID", value: project.id },
+              { name: "DEPLOYMENT_ID", value: deployment.id },
+              { name: "AWS_REGION", value: process.env.AWS_REGION },
+              {
+                name: "AWS_ACCESS_KEY_ID",
+                value: process.env.AWS_ACCESS_KEY_ID,
+              },
+              {
+                name: "AWS_SECRET_ACCESS_KEY",
+                value: process.env.AWS_SECRET_ACCESS_KEY,
+              },
+              {
+                name: "AWS_S3_BUCKET_NAME",
+                value: process.env.AWS_S3_BUCKET_NAME,
+              },
+              { name: "KAFKA_BROKER", value: process.env.KAFKA_BROKER },
+              { name: "KAFKA_USERNAME", value: process.env.KAFKA_USERNAME },
+              { name: "KAFKA_PASSWORD", value: process.env.KAFKA_PASSWORD },
           ],
         },
-      },
+      ],
     },
   });
   await ecsClient.send(command)
@@ -132,9 +147,9 @@ app.post("/deploy", async(req, res) => {
 });
 
 app.get("/logs/:id",async(req,res)=>{
-  const id=req.params
+  const {id}=req.params
   const logs=await client.query({
-    query:`SELECT event_id, deployment_id, log, timestamp from log_events where deployment_id={deployment} `,
+    query:`SELECT event_id, deployment_id, log, timestamp from log_events where deployment_id = {deployment_id:String} `,
     query_params:{
       deployment_id:id
     },
@@ -149,7 +164,7 @@ async function initKafkaConsumer() {
   await consumer.connect()
   await consumer.subscribe({ topic: "container-logs" });
   await consumer.run({
-    eachBatch:async function ({batch, heartbeat, commitOffsetNecessary,resolveOffset}) {
+    eachBatch:async function ({batch, heartbeat, commitOffsetsIfNecessary,resolveOffset}) {
      const messages=batch.messages
      console.log(`Recv. ${messages.length} messages...`)
      for(const message of messages){
@@ -162,7 +177,7 @@ async function initKafkaConsumer() {
         format:"JSONEachRow"
       })
          resolveOffset(message.offset)
- await commitOffsetNecessary(message.offset)
+ await commitOffsetsIfNecessary(message.offset)
  await heartbeat()
      }
     }
