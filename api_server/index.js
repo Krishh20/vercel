@@ -11,8 +11,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { PrismaClient } from "./generated/prisma/client.js";
 import bcrypt from "bcrypt"
-import {jwt} from "jsonwebtoken"
-
+import jwt from "jsonwebtoken";
+import { authMiddleware } from "./Middelware/authMiddleware.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -79,7 +79,7 @@ const userSchema = z.object({
     .max(15, "Password is too long"),
 });
 
-app.post("/register",async(req,res)=>{
+app.post("/user/register",async(req,res)=>{
 
 const safeParseResult=userSchema.safeParse(req.body)
 if(safeParseResult.error)  return res.status(400).json({
@@ -112,7 +112,7 @@ res.status(201).json({
     });
 })
 
-app.post("/login",async(req,res)=>{
+app.post("/user/login",async(req,res)=>{
 const safeParseResult=userSchema.safeParse(req.body)
 if(safeParseResult.error)  return res.status(400).json({
   error:safeParseResult.error
@@ -133,12 +133,12 @@ const user=await prisma.user.findUnique({
       return res.status(400).json({ message: "invalid username or password" });
     }
 
-    const token=jwt.sign({userId:user.id},"KRISH")
+    const token=jwt.sign({userId:user.id},process.env.JWT_SECRET)
      res.status(200).json({ message: "login success", token:token,authName:username })
 })
 //add authmiddleware
-app.get("/getProjects",authMiddleware,async(req,res)=>{
-  const projects = await prismaClient.project.findMany({
+app.get("/user/getProjects",authMiddleware,async(req,res)=>{
+  const projects = await prisma.project.findMany({
       where: {
         userId: req.userId,
       },
@@ -154,7 +154,7 @@ app.get("/getProjects",authMiddleware,async(req,res)=>{
     res.status(200).json({ projects });
 })
 
-app.post("/project",async(req,res)=>{
+app.post("/project",authMiddleware,async(req,res)=>{
 
 const schema=z.object({
   name:z.string(),
@@ -169,13 +169,13 @@ const {name, gitURL}=safeParseResult.data
 
 const project= await prisma.project.create({
   data:{
-   name, gitURL, subDomain:generateSlug()
+   name, gitURL, subDomain:generateSlug(),  userId: req.userId,
   }
 })
 return res.json({status:"success", data:{project}})
 })
 
-app.post("/deploy", async(req, res) => {
+app.post("/project/deploy", async(req, res) => {
   const { projectId } = req.body;
   const project=await prisma.project.findUnique({where:{id:projectId}})
   if(!project) return res.status(404).json({error:"project not found"})
