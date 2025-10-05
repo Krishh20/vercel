@@ -55,6 +55,7 @@ function Page() {
         );
 
         setSuccess("Project created successfully ");
+        console.log(data)
         console.log("Project:", data.project);
 
         // reset form

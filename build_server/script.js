@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 
-const PROJECT_ID= process.env.PROJECT_ID
+const PROJECT_ID=  process.env.PROJECT_ID
 const DEPLOYMENT_ID=process.env.DEPLOYMENT_ID
 const kafka=new Kafka({
     clientId:`docker-build-server-${DEPLOYMENT_ID}`, //why unique client id for every delpoyment

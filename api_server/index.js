@@ -32,7 +32,7 @@ app.use(
 
 const prisma =new PrismaClient()
 
-const JWT_SECRET=process.env.JWT_SECRET
+
 
 app.use(express.json());
 
@@ -101,13 +101,14 @@ const user=await prisma.user.create({
     username, password:hashedPassword
   }
 })
-
+const token=jwt.sign({userId:user.id},process.env.JWT_SECRET)
 res.status(201).json({
       message: "user registered successfully",
       success: true,
       user: {
         id: user.id,
         username: user.username,
+         token: token,
       },
     });
 })
@@ -175,7 +176,7 @@ const project= await prisma.project.create({
 return res.json({status:"success", data:{project}})
 })
 
-app.post("/project/deploy", async(req, res) => {
+app.post("/project/deploy",  authMiddleware,async(req, res) => {
   const { projectId } = req.body;
   const project=await prisma.project.findUnique({where:{id:projectId}})
   if(!project) return res.status(404).json({error:"project not found"})
@@ -238,24 +239,28 @@ const deployment = await prisma.deployment.create({
   await ecsClient.send(command)
   return res.json({
     status:"queued",
-    data:{
+
      deploymentId:deployment.id
-    }
+
   })
 });
 
-app.get("/logs/:id",async(req,res)=>{
-  const {id}=req.params
-  const logs=await client.query({
-    query:`SELECT event_id, deployment_id, log, timestamp from log_events where deployment_id = {deployment_id:String} `,
-    query_params:{
-      deployment_id:id
-    },
-     format:"JSONEachRow"
-  })
-  const rawLOgs=await  logs.json() //converted to json
-  return res.json({rawLOgs})
-})
+app.get("/project/logs/:id", async (req, res) => {
+  const { id } = req.params;
+ const logs = await client.query({
+      query: `SELECT event_id, deployment_id, log, timestamp from log_events where deployment_id = {deployment_id:String}`,
+      query_params: {
+        deployment_id: id,
+      },
+      format: "JSONEachRow",
+    });
+    const rawLogs = await logs.json();
+    res.status(200).json({
+      logs: rawLogs,
+    });
+});
+
+
 
 async function initKafkaConsumer() {
   autoCommit:false

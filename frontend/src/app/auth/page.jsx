@@ -369,4 +369,5 @@ function Auth() {
   );
 }
 
-export default Auth;
+export default Auth;          //not sending token from signup, fixxx
+                               //github provider,   why text too light

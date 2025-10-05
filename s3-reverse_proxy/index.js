@@ -19,7 +19,7 @@ const subdomain=hostName.split('.')[0]
 
 const project=await prismaClient.project.findFirst({
     where:{
-        subdomain
+        subDomain:subdomain
     }
 })
 

@@ -22,6 +22,7 @@ export default function DeployPage() {
   const [error, setError] = useState(null);
   const [isDeployed, setIsDeployed] = useState(false);
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
+     const URL=process.env.NEXT_PUBLIC_URL
 
   // Fetch project details
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function DeployPage() {
 
   // Fetch logs (polling with deploymentId)
   useEffect(() => {
+
     if (!deploymentId) return;
 
     const interval = setInterval(async () => {
@@ -55,12 +57,12 @@ export default function DeployPage() {
           }
         );
 
-        const newLogs = data.logs || [];
+      const newLogs = data.logs || [];
+          console.log("Fetched logs:", newLogs);
         setLogs(newLogs);
 
-        const isComplete = newLogs.some((log) =>
-          log.log.includes("All files uploaded successfully")
-        );
+       const isComplete = newLogs.some(log => log?.log?.includes("Done"));
+
 
         if (isComplete) {
           setIsDeployed(true);
@@ -98,7 +100,7 @@ export default function DeployPage() {
       if (!response.ok) {
         throw new Error(data.message || "Deployment failed");
       }
-
+          console.log("DeploymentId",data.deploymentId)
       setDeploymentId(data.deploymentId);
     } catch (err) {
       setError(err.message);
@@ -127,7 +129,7 @@ export default function DeployPage() {
       return url;
     }
   };
-
+console.log("Live URL:", `${project.subDomain}.${URL}`);
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
       <div className="max-w-7xl mx-auto">
@@ -218,7 +220,7 @@ export default function DeployPage() {
                     <p className="font-semibold">Your project is live!</p>
                   </div>
                   <a
-                    href={`http://${project.subDomain}.${API_URL}`}
+                    href={`https://${project.subDomain}.${URL}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm"
