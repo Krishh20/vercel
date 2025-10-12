@@ -106,7 +106,7 @@ If you don't want to use NeonDB, you can run PostgreSQL locally. In that case, u
 * Open the dashboard
 * Paste a Git repository URL
 * Watch ECS build logs live powered by Kafka + ClickHouse
-* Access at: `https://<project>.<your-domain>.com`
+* Access at: Local: http://<subdomain>.localhost:8000
 
 ---
 
