@@ -110,6 +110,13 @@ If you don't want to use NeonDB, you can run PostgreSQL locally. In that case, u
 
 ---
 
+## 🎥 Demo Video
+
+Click below to watch the demo:
+
+[▶️ Watch Vercel Clone Demo](https://github.com/Krishh20/vercel/blob/main/VERCEL_DEMO.mp4)
+
+
 ## 📜 Disclaimer
 
 This project is a custom-built deployment platform for learning and scaling full-stack infrastructure systems. It is **not affiliated with Vercel**.
